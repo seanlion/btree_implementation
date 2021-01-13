@@ -458,8 +458,6 @@ int main(void) {
 	delete(root, 160);
 	printTree(root, 1);
 
-	//searchNode(root,30);
-
 
 	return 0;
 }
