@@ -1,6 +1,34 @@
 #include "b_tree.h"
 
-struct BTreeNode* createNode(int val){ // 포인터로 노드를 만들었고, 그걸 createNode라고 명명했다. 받아오는 값은 '넣는 데이터'.
+
+// 검색하는 함수
+int searchNode(struct BTreeNode* node, int val){
+    if (!node){
+        printf("Empty tree.\n");
+        return 0;
+    }
+    struct BTreeNode* level = node;
+    while (true){
+        int pos;
+        for (pos=0; pos<level->cnt_key; pos++){
+            if (val== level->key[pos]){
+                printf("key %d exists!",val);
+                return 1;
+            }
+            else if (val<level->key[pos]){
+                break;
+            }
+        }
+        if (level->leaf) break;
+        level = level->child[pos];
+    }
+    printf("key %d does not exist",val);
+    return 0;
+}
+
+
+// 포인터로 노드를 만들었고, 그걸 createNode라고 명명했다. 받아오는 값은 '넣는 데이터'.
+struct BTreeNode* createNode(int val){ 
     struct BTreeNode* newNode; // 새로운 node 구조체 선언
     newNode = (struct BTreeNode*)malloc(sizeof(struct BTreeNode)); // node에 동적할당
     newNode -> leaf = false; // 처음에 리프여부는 초기값 false로
@@ -458,6 +486,7 @@ int main(void) {
 	delete(root, 160);
 	printTree(root, 1);
 
+    searchNode(root,30);
 
 	return 0;
 }
