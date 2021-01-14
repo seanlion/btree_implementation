@@ -14,11 +14,11 @@ struct BTreeNode {
     int key[max_keys+1]; // key를 담을 배열
     int cnt_key; // 키 개수 확인용
     struct BTreeNode* child[max_children+1]; // 자식 포인터배열 (노드들이 배열로)
+    int child_data[max_keys+1];
     struct BTreeNode* next;
     int cnt_child; // 자식 개수 확인용
 };
 struct BTreeNode* root; // root 노드 기본 설정(포인터로)
-
 struct BTreeNode* createNode(int val);
 
 /*SEARCH******************************************************************************************************/
@@ -73,12 +73,13 @@ struct BTreeNode* splitNode(int pos, struct BTreeNode* node, struct BTreeNode* p
     right_node->next = node->next;
 
 
-    if (node->leaf){ // 현재 노드가 리프가 아니면, 자식 담기
+    if (node->leaf){ // 현재 노드가 리프이면, 자식 담기
         node->next = right_node;
         node->end_leaf = false;
         int num_iter = node->cnt_key;
         for (int i = median; i < num_iter; i++ ) { // 오른쪽 노드에 현재 노드 자식 절반 담기
             right_node->key[i-median] = node->key[i];
+            right_node->child_data[i-median] = node->child_data[i];
             right_node-> cnt_key++; // 새로 채워준 노드의 자식 개수는 증가, 현재 노드에서는 빼기
             node->cnt_key--;
         }
@@ -128,7 +129,7 @@ struct BTreeNode* splitNode(int pos, struct BTreeNode* node, struct BTreeNode* p
     return node; //현재 노드 리턴
 }
 
-struct BTreeNode* insertNode(int parent_pos, int val, struct BTreeNode* node, struct BTreeNode* parent) { // 삽입할 값,  
+struct BTreeNode* insertNode(int parent_pos, int val, struct BTreeNode* node, struct BTreeNode* parent, int value) { // 삽입할 값,  
     int pos; // 현재 노드에서 키의 위치를 갖고 있어야 함. 왜냐면 넣으려고 하는 값의 위치를 찾아야 하기 때문.
     for (pos =0; pos < node->cnt_key; pos++ ) {// pos 위치는 0부터 해서, 현재 노드의 키 개수만큼 탐색
         if (val == node -> key[pos]){ // node의 pos번째 키와 val이 같으면
@@ -140,7 +141,7 @@ struct BTreeNode* insertNode(int parent_pos, int val, struct BTreeNode* node, st
         }
     }// 만약 val이 그 node에 있는 값보다 크면 당연히 마지막 pos가 나올 것임.
     if (!node->leaf) { // node leaf 여부가 false이면, leaf가 아니면
-        node -> child[pos] = insertNode(pos, val, node->child[pos] ,node); // node의 pos번째 자식 노드에 insertNode 값을 담는다. 재귀로 자식을 탐색하기 위해 또 들어감.
+        node -> child[pos] = insertNode(pos, val, node->child[pos] ,node, value); // node의 pos번째 자식 노드에 insertNode 값을 담는다. 재귀로 자식을 탐색하기 위해 또 들어감.
         if (node->cnt_key == max_keys +1){ // 현재 노드 키 개수가 규칙에서 벗어날거같으면
             node = splitNode(parent_pos, node,parent); // 윗 방향으로 분리를 해야 함.
         }
@@ -148,10 +149,12 @@ struct BTreeNode* insertNode(int parent_pos, int val, struct BTreeNode* node, st
     else { // leaf일 때의 삽입 로직
         for (int i = node->cnt_key; i > pos; i--) { // 끝에서부터 val을 삽입해야 하는 위치에 있는 노드까지의 노드들을 뒤로 땡기는 작업을 한다.
             node -> key[i] = node->key[i-1]; // 키가 뒤로 한 칸씩 가는 작업.
-            // node -> child[i+1] = node->child[i]; // 자식도 마찬가지.
+            node -> child[i+1] = node->child[i]; // 자식도 마찬가지.
         }
 
         node -> key[pos] = val; // val을 삽입해야 하는 위치에 val 삽입.
+        // node -> child_data = value;
+        node -> child_data[pos] = value;
         node -> cnt_key++; // 하나 십입했으니 키 개수 증가
         if (node-> cnt_key == max_keys+1){ // leaf 노드가 꽉 찼으면 분리를 해준다.
             node = splitNode(parent_pos, node,parent);
@@ -162,7 +165,7 @@ struct BTreeNode* insertNode(int parent_pos, int val, struct BTreeNode* node, st
 
 
 // 삽입 함수 제작 (인자 : 받아야 하는 값)
-void insert(int val){
+void insert(int val, int value){
     if (!root){ // root가 없으면
         root = createNode(val); // root를 만들어라.
         root -> leaf = true ; // 처음 만들어지는거니까 root이자 leaf 노드.
@@ -170,7 +173,7 @@ void insert(int val){
         return;
     }
     else{ // 루트가 있으면
-        root = insertNode(0,val,root,root); // 처음에는 root가 부모이자 리프노드.
+        root = insertNode(0,val,root,root,value); // 처음에는 root가 부모이자 리프노드.
     }
 }
 
@@ -465,7 +468,8 @@ void printLeaves(struct BTreeNode* node) {			 // leaf 그리기
 	}
 	if (node->leaf) {
 		for (int i = 0; i < node->cnt_key; i++) {
-			printf("%d ", node->key[i]);
+			printf("%d :", node->key[i]);
+            printf("%d ", node->child_data[i]);
 		}
 		printf("| ");
 		if (!node->end_leaf) {
@@ -481,29 +485,27 @@ void printLeaves(struct BTreeNode* node) {			 // leaf 그리기
 }
 
 int main(void) {
-    printf("%d\n",max_keys);
-    printf("%d\n",min_keys);
-	insert(1);
-	insert(4);
-	insert(7);
-	insert(10);
-	insert(17);
-	insert(21);
-	insert(31);
-	insert(25);
-	insert(19);
-	insert(20);
-	insert(28);
-	insert(42);
+	insert(1,6500);
+	insert(4,5000);
+	insert(7,3000);
+	insert(10,2000);
+	insert(17,8000);
+	insert(21,900);
+	// insert(31);
+	// insert(25);
+	// insert(19);
+	// insert(20);
+	// insert(28);
+	// insert(42);
 
-	delete(root, 21);
-	delete(root, 31);
-	delete(root, 20);
-	delete(root, 10);
-	delete(root, 7);
-	delete(root, 25);
-	delete(root, 42);
-	delete(root, 4);
+	// delete(root, 21);
+	// delete(root, 31);
+	// delete(root, 20);
+	// delete(root, 10);
+	// delete(root, 7);
+	// delete(root, 25);
+	// delete(root, 42);
+	// delete(root, 4);
 
 	// for (int i = 10; i < 100; i += 10) {
 	// 	insert(i);
